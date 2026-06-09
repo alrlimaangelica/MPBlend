@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Otimizador de Blend + Matéria-Prima</title>
+  <style>
+    :root{
+      --grid:#cfcfcf;
+      --grid-dark:#9ca3af;
+      --title:#1f4e78;
+      --head:#d9eaf7;
+      --subhead:#eaf4fb;
+      --ok:#d9ead3;
+      --ok-text:#274e13;
+      --bad:#f4cccc;
+      --bad-text:#990000;
+      --warn:#fff2cc;
+      --muted:#f3f4f6;
+      --input:#fff;
+      --blue:#2563eb;
+      --blue-dark:#1d4ed8;
+      --green:#15803d;
+      --red:#b91c1c;
+      --text:#172033;
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: Arial, Helvetica, sans-serif;
+      background:#f6f8fb;
+      color:var(--text);
+    }
+
+    .page{
+      max-width: 1320px;
+      margin: 22px auto;
+      padding: 0 18px 28px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:14px;
+    }
+
+    .title-block h1{
+      margin:0 0 6px;
+      font-size:24px;
+      color:#12304a;
+      letter-spacing:.2px;
+    }
+
+    .title-block p{
+      margin:0;
+      color:#475569;
+      font-size:14px;
+      line-height:1.35;
+    }
+
+    .actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    button, select{
+      font-family:inherit;
+    }
+
+    button{
+      border:0;
+      padding:10px 14px;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:700;
+      box-shadow: 0 1px 2px rgba(0,0,0,.12);
+      transition:.15s ease;
+      white-space:nowrap;
+    }
+    button:hover{ transform: translateY(-1px); }
+    .btn-primary{ background:var(--blue); color:#fff; }
+    .btn-primary:hover{ background:var(--blue-dark); }
+    .btn-green{ background:var(--green); color:#fff; }
+    .btn-light{ background:#fff; color:#1f2937; border:1px solid #d1d5db; }
+    .btn-danger{ background:#fff; color:var(--red); border:1px solid #fecaca; box-shadow:none; padding:6px 9px; }
+    .btn-small{ padding:7px 9px; font-size:12px; }
+
+    .toolbar{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      background:#fff;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      padding:12px;
+      margin-bottom:14px;
+      box-shadow:0 4px 16px rgba(15,23,42,.06);
+    }
+    .toolbar label{
+      font-size:13px;
+      color:#334155;
+      font-weight:700;
+    }
+    .toolbar select{
+      height:36px;
+      border:1px solid #cbd5e1;
+      border-radius:7px;
+      padding:0 8px;
+      background:#fff;
+    }
+    .hint{
+      font-size:12px;
+      color:#64748b;
+      margin-left:auto;
+    }
+
+    .sheet-wrap{
+      background:#fff;
+      border:1px solid #d1d5db;
+      border-radius:12px;
+      box-shadow:0 8px 24px rgba(15,23,42,.08);
+      overflow:auto;
+    }
+
+    table.sheet{
+      border-collapse:collapse;
+      width:100%;
+      min-width:1240px;
+      table-layout:fixed;
+    }
+    .sheet col.c1{ width:210px; }
+    .sheet col.cunit{ width:82px; }
+    .sheet col.cgap{ width:24px; }
+    .sheet col.cmp{ width:130px; }
+    .sheet col.ctotal{ width:105px; }
+    .sheet col.cmeta{ width:100px; }
+    .sheet col.cstatus{ width:110px; }
+    .sheet col.cmax{ width:145px; }
+    .sheet td, .sheet th{
+      border:1px solid var(--grid);
+      padding:5px 6px;
+      min-height:28px;
+      height:31px;
+      font-size:13px;
+      vertical-align:middle;
+    }
+    .sheet .title-row td{
+      background:var(--title);
+      color:#fff;
+      font-weight:700;
+      font-size:15px;
+      height:34px;
+      border-color:#17395a;
+    }
+    .label{
+      background:#f8fafc;
+      font-weight:700;
+      color:#1e293b;
+    }
+    .mp-head{
+      background:var(--head);
+      font-weight:700;
+      text-align:center;
+    }
+    .section-head td{
+      background:var(--head);
+      font-weight:700;
+      text-align:center;
+      border-top:2px solid var(--grid-dark);
+    }
+    .section-head td:first-child{ text-align:left; }
+    .gap{ background:#f7f7f7; }
+    .total-cell{
+      background:#eef2ff;
+      font-weight:700;
+      text-align:center;
+    }
+    .result-banner{
+      font-weight:700;
+      background:#f8fafc;
+      color:#334155;
+    }
+    .result-banner.ok{
+      background:var(--ok);
+      color:var(--ok-text);
+    }
+    .result-banner.bad{
+      background:var(--bad);
+      color:var(--bad-text);
+    }
+    .result-banner.warn{
+      background:var(--warn);
+      color:#7c4a03;
+    }
+
+    input.cell-input, select.cell-select{
+      width:100%;
+      height:25px;
+      border:1px solid transparent;
+      background:transparent;
+      padding:2px 4px;
+      font:inherit;
+      text-align:center;
+      border-radius:4px;
+      color:#111827;
+    }
+    input.cell-input.text{
+      text-align:left;
+      font-weight:700;
+    }
+    input.cell-input:focus, select.cell-select:focus{
+      outline:2px solid #93c5fd;
+      background:#fff;
+      border-color:#60a5fa;
+    }
+    .editable{
+      background:#fff;
+    }
+    .calc{
+      background:#f8fafc;
+      text-align:center;
+      font-weight:700;
+    }
+    .status{
+      text-align:center;
+      font-weight:700;
+      border-radius:0;
+    }
+    .status.ok{
+      background:var(--ok);
+      color:var(--ok-text);
+    }
+    .status.bad{
+      background:var(--bad);
+      color:var(--bad-text);
+    }
+    .row-bad td{
+      background:#fff7f7;
+    }
+    .row-bad td.status{ background:var(--bad); }
+    .max-col{
+      background:#f8fafc;
+      text-align:center;
+      color:#334155;
+    }
+    .max-col.active{
+      background:#fff7ed;
+      font-weight:700;
+      color:#9a3412;
+    }
+    .footer-note{
+      margin-top:10px;
+      color:#64748b;
+      font-size:12px;
+      line-height:1.4;
+    }
+    .summary{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(160px, 1fr));
+      gap:10px;
+      margin:14px 0;
+    }
+    .card{
+      background:#fff;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      padding:12px;
+      box-shadow:0 4px 16px rgba(15,23,42,.05);
+    }
+    .card .k{
+      font-size:12px;
+      color:#64748b;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+    .card .v{
+      margin-top:5px;
+      font-size:20px;
+      font-weight:800;
+      color:#0f172a;
+    }
+    .card.ok .v{ color:var(--green); }
+    .card.bad .v{ color:var(--red); }
+    .card.warn .v{ color:#b45309; }
+    .remove-holder{ text-align:center; background:#fff; }
+
+
+    .analysis-panel{
+      background:#fff;
+      border:1px solid #e5e7eb;
+      border-left:5px solid var(--title);
+      border-radius:12px;
+      padding:12px 14px;
+      margin: -2px 0 14px;
+      box-shadow:0 4px 16px rgba(15,23,42,.05);
+    }
+    .analysis-panel[hidden]{ display:none; }
+    .analysis-title{
+      font-size:12px;
+      color:#64748b;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      margin-bottom:6px;
+    }
+    .analysis-text{
+      font-size:13px;
+      line-height:1.45;
+      color:#1e293b;
+    }
+    .analysis-list{
+      margin-top:8px;
+      display:grid;
+      gap:6px;
+    }
+    .analysis-item{
+      background:#fff7ed;
+      border:1px solid #fed7aa;
+      border-radius:8px;
+      padding:8px 10px;
+      font-size:13px;
+      color:#7c2d12;
+    }
+
+    @media(max-width:900px){
+      .topbar{ flex-direction:column; }
+      .actions{ justify-content:flex-start; }
+      .summary{ grid-template-columns:1fr 1fr; }
+      .hint{ margin-left:0; width:100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="topbar">
+      <div class="title-block">
+        <h1>Otimizador de Blend + Matéria-Prima</h1>
+        <p>Otimiza o blend e, se ficar inviável, calcula o ajuste necessário para a matéria-prima escolhida.</p>
+      </div>
+      <div class="actions">
+        <button class="btn-green" id="optBtn">Otimizar</button>
+        <button class="btn-primary" id="calcBtn">Recalcular</button>
+        <button class="btn-light" id="clearBtn">Limpar</button>
+        <button class="btn-light" id="restoreBtn">Restaurar valores da planilha</button>
+        <button class="btn-light" id="exportCsvBtn">Exportar dados em CSV</button>
+        <button class="btn-light" id="saveScenarioBtn">Salvar cenário no navegador</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <label for="precision">Precisão da otimização:</label>
+      <select id="precision">
+        <option value="1" selected>1%</option>
+        <option value="2">2%</option>
+        <option value="5">5%</option>
+      </select>
+      <label for="chosenMp">Matéria-prima para ajuste se inviável:</label>
+      <select id="chosenMp"></select>
+      <span class="hint">Dica: edite direto nas células, como no Excel. Use apenas este seletor para escolher a matéria-prima ajustável.</span>
+    </div>
+
+    <section class="summary" aria-label="Resumo do blend">
+      <div class="card" id="cardStatus"><div class="k">Status</div><div class="v" id="kpiStatus">-</div></div>
+      <div class="card"><div class="k">Total do blend</div><div class="v" id="kpiTotal">-</div></div>
+      <div class="card"><div class="k">Contaminantes fora</div><div class="v" id="kpiOut">-</div></div>
+    </section>
+
+    <section class="analysis-panel" id="mpAnalysis" hidden>
+      <div class="analysis-title">Análise da matéria-prima ajustável</div>
+      <div class="analysis-text" id="mpAnalysisText"></div>
+      <div class="analysis-list" id="mpAnalysisList"></div>
+    </section>
+
+    <div class="sheet-wrap">
+      <table class="sheet" id="sheetTable">
+        <colgroup>
+          <col class="c1" />
+          <col class="cunit" />
+          <col class="cgap" />
+          <col class="cmp" />
+          <col class="cmp" />
+          <col class="cmp" />
+          <col class="cmp" />
+          <col class="ctotal" />
+          <col class="cmeta" />
+          <col class="cstatus" />
+          <col class="cmax" />
+        </colgroup>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <p class="footer-note">
+      O otimizador busca a melhor combinação, para que se tenha um menor impacto nos contaminantes. Quando não fecha, a última coluna mostra quanto a matéria-prima escolhida poderia ter em cada contaminante, na unidade informada, para viabilizar o blend.
+    </p>
+  </main>
+
+<script>
+const originalState = {
+  materials: [
+    { name: 'Óleo de soja', blend: 11, use: 'Sim', min: 1, max: 100 },
+    { name: 'Canola/Colza', blend: 15, use: 'Sim', min: 15, max: 100 },
+    { name: 'Sebo', blend: 31, use: 'Sim', min: 15, max: 100 },
+    { name: 'UCO', blend: 43, use: 'Sim', min: 15, max: 100 }
+  ],
+  contaminants: [
+    { name: 'Umidade', unit: '%w', values: [1, 1, 1, 1], meta: 1 },
+    { name: 'Ácidos graxos livres (FFA)', unit: '%w', values: [2, 2.5, 5, 12], meta: 7.4375 },
+    { name: 'Impurezas insolúveis', unit: '%w', values: [0.5, 0.5, 0.5, 0.8], meta: 0.64 },
+    { name: 'Matéria insaponificável', unit: '%w', values: [1, 1, 1, 1], meta: 1 },
+    { name: 'Fósforo', unit: 'ppm', values: [300, 500, 200, 50], meta: 193.75 },
+    { name: 'Metais totais', unit: 'ppm', values: [250, 350, 100, 50], meta: 140.625 },
+    { name: 'Enxofre', unit: 'ppm', values: [35, 35, 35, 35], meta: 35 },
+    { name: 'Nitrogênio', unit: 'ppm', values: [100, 100, 100, 100], meta: 100 },
+    { name: 'Cloretos totais', unit: 'ppm', values: [10, 10, 200, 30], meta: 78.125 },
+    { name: 'Cloretos orgânicos', unit: 'ppm', values: [0, 0, 30, 10], meta: 13.75 },
+    { name: 'Polietileno', unit: 'ppm', values: [0, 0, 1000, 50], meta: 334.375 }
+  ]
+};
+
+let state = structuredClone(originalState);
+let lastMode = 'manual';
+let lastInfeasible = false;
+let lastBestWeights = null;
+let chosenIndex = 0;
+
+const tbody = document.getElementById('tableBody');
+const chosenMp = document.getElementById('chosenMp');
+const precisionEl = document.getElementById('precision');
+
+function num(v){
+  if (v === null || v === undefined || v === '') return 0;
+  const n = Number(String(v).replace(',', '.'));
+  return Number.isFinite(n) ? n : 0;
+}
+function fmt(v, digits=4){
+  if (!Number.isFinite(v)) return '';
+  const abs = Math.abs(v);
+  let d = digits;
+  if (abs >= 100) d = 2;
+  if (abs >= 1000) d = 1;
+  if (Number.isInteger(v)) d = 0;
+  return Number(v.toFixed(d)).toLocaleString('pt-BR', { maximumFractionDigits:d });
+}
+function pct(v){ return `${fmt(v,2)}%`; }
+function td(html='', cls=''){
+  return `<td class="${cls}">${html}</td>`;
+}
+function input(value, path, cls='', type='number'){
+  const val = value ?? '';
+  const step = type === 'text' ? '' : ' step="any" inputmode="decimal"';
+  return `<input class="cell-input ${cls}" data-path="${path}" type="${type}"${step} value="${String(val).replaceAll('"','&quot;')}" />`;
+}
+function selectSimNao(value, path){
+  const s = String(value || 'Não').toLowerCase().startsWith('s') ? 'Sim' : 'Não';
+  return `<select class="cell-select" data-path="${path}"><option ${s==='Sim'?'selected':''}>Sim</option><option ${s==='Não'?'selected':''}>Não</option></select>`;
+}
+
+function readStateFromDom(){
+  document.querySelectorAll('[data-path]').forEach(el => {
+    const path = el.dataset.path.split('.');
+    let ref = state;
+    for (let i=0; i<path.length-1; i++) ref = ref[path[i]];
+    const key = path[path.length-1];
+    if (el.tagName === 'SELECT') ref[key] = el.value;
+    else if (el.type === 'text') ref[key] = el.value;
+    else ref[key] = num(el.value);
+  });
+}
+
+function updateChosenOptions(){
+  const previous = Number.isFinite(chosenIndex) ? chosenIndex : Number(chosenMp.value || 0);
+  chosenMp.innerHTML = state.materials.map((m,i) => `<option value="${i}">${m.name || 'MP ' + (i+1)}</option>`).join('');
+  chosenIndex = Math.min(Math.max(0, previous), Math.max(0, state.materials.length - 1));
+  chosenMp.value = String(chosenIndex);
+}
+
+function totalBlend(){ return state.materials.reduce((s,m)=>s+num(m.blend),0); }
+function calcRows(weights=null){
+  const w = weights || state.materials.map(m => num(m.blend));
+  return state.contaminants.map(row => {
+    const result = row.values.reduce((s,v,j)=> s + (num(w[j]) / 100) * num(v), 0);
+    const meta = num(row.meta);
+    const ratio = meta === 0 ? (result > 0 ? Infinity : 0) : result / meta;
+    return { ...row, result, ratio, status: result <= meta + 1e-9 ? 'Dentro' : 'Fora' };
+  });
+}
+function scoreForWeights(weights){
+  const rows = calcRows(weights);
+  let sc = 0;
+  for (const r of rows){
+    if (!Number.isFinite(r.ratio)) return Infinity;
+    if (r.ratio > sc) sc = r.ratio;
+  }
+  return sc;
+}
+function maxForChosen(weights){
+  const chosen = chosenIndex;
+  const pc = num(weights[chosen]) / 100;
+  if (pc <= 0) return state.contaminants.map(() => null);
+  const rows = calcRows(weights);
+  return rows.map((r, i) => {
+    const chosenCont = num(state.contaminants[i].values[chosen]);
+    const others = r.result - pc * chosenCont;
+    let mx = (num(r.meta) - others) / pc;
+    if (!Number.isFinite(mx)) mx = 0;
+    if (mx < 0) mx = 0;
+    return mx;
+  });
+}
+
+function render(){
+  updateChosenOptions();
+  const total = totalBlend();
+  const rows = calcRows();
+  const outRows = rows.filter(r => r.status === 'Fora');
+  const totalClass = Math.abs(total - 100) < 1e-9 ? 'total-cell' : 'total-cell result-banner warn';
+  const maxVals = lastInfeasible && lastBestWeights ? maxForChosen(lastBestWeights) : state.contaminants.map(()=>null);
+
+  let html = '';
+  html += `<tr class="title-row"><td colspan="11">MATÉRIAS-PRIMAS</td></tr>`;
+
+  html += `<tr>`;
+  html += td('Matéria-prima','label');
+  html += td('', '');
+  html += td('', 'gap');
+  state.materials.forEach((m,j)=> html += td(input(m.name, `materials.${j}.name`, 'text', 'text'), 'mp-head editable'));
+  html += td('TOTAL', 'mp-head');
+  html += td('', '');
+  html += td('', '');
+  html += td('', '');
+  html += `</tr>`;
+
+  html += `<tr>`;
+  html += td('% Blend (resultado)','label');
+  html += td('', '');
+  html += td('', 'gap');
+  state.materials.forEach((m,j)=> html += td(input(m.blend, `materials.${j}.blend`), 'editable'));
+  html += td(fmt(total,2), totalClass);
+  html += td('', ''); html += td('', ''); html += td('', '');
+  html += `</tr>`;
+
+  html += `<tr>`;
+  html += td('Usar? (Sim/Não)','label');
+  html += td('', '');
+  html += td('', 'gap');
+  state.materials.forEach((m,j)=> html += td(selectSimNao(m.use, `materials.${j}.use`), 'editable'));
+  html += td('', ''); html += td('', ''); html += td('', ''); html += td('', '');
+  html += `</tr>`;
+
+  const minSum = state.materials.reduce((s,m)=>s+(String(m.use).toLowerCase().startsWith('s') ? num(m.min) : 0),0);
+  html += `<tr>`;
+  html += td('% min','label');
+  html += td('', '');
+  html += td('', 'gap');
+  state.materials.forEach((m,j)=> html += td(input(m.min, `materials.${j}.min`), 'editable'));
+  html += td(fmt(minSum,2), minSum > 100 ? 'result-banner bad' : 'calc');
+  html += td('', ''); html += td('', ''); html += td('', '');
+  html += `</tr>`;
+
+  html += `<tr>`;
+  html += td('% max','label');
+  html += td('', '');
+  html += td('', 'gap');
+  state.materials.forEach((m,j)=> html += td(input(m.max, `materials.${j}.max`), 'editable'));
+  html += td('', ''); html += td('', ''); html += td('', ''); html += td('', '');
+  html += `</tr>`;
+
+  const msg = document.body.dataset.message || 'Edite os valores e clique em Recalcular ou Otimizar.';
+  const msgClass = document.body.dataset.messageClass || 'warn';
+  html += `<tr>`;
+  html += td('Resultado:','label');
+  html += td('', '');
+  html += td('', 'gap');
+  html += `<td colspan="8" class="result-banner ${msgClass}" id="resultMsg">${msg}</td>`;
+  html += `</tr>`;
+
+  html += `<tr class="title-row"><td colspan="11">CONTAMINANTES</td></tr>`;
+
+  html += `<tr class="section-head">`;
+  html += td('Contaminante');
+  html += td('Unidade');
+  html += td('', 'gap');
+  state.materials.forEach(m => html += td(m.name || 'MP'));
+  html += td('Resultado<br>do blend');
+  html += td('Meta / Limite');
+  html += td('Situação');
+  html += td(lastInfeasible ? `Máximo permitido para ${state.materials[chosenIndex]?.name || 'matéria-prima'}` : '');
+  html += `</tr>`;
+
+  state.contaminants.forEach((r,i)=>{
+    const calc = rows[i];
+    html += `<tr class="${calc.status === 'Fora' ? 'row-bad' : ''}">`;
+    html += td(input(r.name, `contaminants.${i}.name`, 'text', 'text'), 'editable');
+    html += td(input(r.unit || '', `contaminants.${i}.unit`, 'text', 'text'), 'editable');
+    html += td('', 'gap');
+    for (let j=0;j<state.materials.length;j++) html += td(input(r.values[j], `contaminants.${i}.values.${j}`), 'editable');
+    html += td(fmt(calc.result,4), 'calc');
+    html += td(input(r.meta, `contaminants.${i}.meta`), 'editable');
+    html += td(calc.status, `status ${calc.status === 'Dentro' ? 'ok' : 'bad'}`);
+    const mx = maxVals[i];
+    const maxCls = mx === null ? 'max-col' : 'max-col active';
+    html += td(mx === null ? '' : fmt(mx,2), maxCls);
+    html += `</tr>`;
+  });
+
+  tbody.innerHTML = html;
+  wireInputs();
+  wireInlineChosen();
+  updateKpis(rows, total, outRows);
+  updateMpAnalysis(rows);
+}
+
+function updateMpAnalysis(rows){
+  const panel = document.getElementById('mpAnalysis');
+  const textEl = document.getElementById('mpAnalysisText');
+  const listEl = document.getElementById('mpAnalysisList');
+  if (!panel || !textEl || !listEl) return;
+  if (!lastInfeasible || !lastBestWeights){
+    panel.hidden = true;
+    textEl.textContent = '';
+    listEl.innerHTML = '';
+    return;
+  }
+  const chosenName = state.materials[chosenIndex]?.name || 'matéria-prima escolhida';
+  const maxVals = maxForChosen(lastBestWeights);
+  const baseRows = calcRows(lastBestWeights);
+  const relevantes = baseRows.map((r,i)=>({
+    name: state.contaminants[i].name,
+    ratio: r.ratio,
+    status: r.status,
+    current: num(state.contaminants[i].values[chosenIndex]),
+    unit: state.contaminants[i].unit || '',
+    max: maxVals[i]
+  })).filter(x => x.status === 'Fora')
+    .sort((a,b)=>b.ratio-a.ratio);
+
+  if (relevantes.length === 0){
+    panel.hidden = true;
+    return;
+  }
+
+  const principal = relevantes[0];
+  textEl.textContent = `Para viabilizar, ${chosenName} precisa ter no máximo ${fmt(principal.max,2)} ${principal.unit || ''} em ${principal.name}. Valor atual informado para ${chosenName}: ${fmt(principal.current,2)} ${principal.unit || ''}.`;
+  listEl.innerHTML = relevantes.slice(0,5).map(x =>
+    `<div class="analysis-item">Para viabilizar, <strong>${chosenName}</strong> precisa ter no máximo <strong>${fmt(x.max,2)} ${x.unit || ''}</strong> em <strong>${x.name}</strong> (valor atual: ${fmt(x.current,2)} ${x.unit || ''}).</div>`
+  ).join('');
+  panel.hidden = false;
+}
+
+function updateKpis(rows, total, outRows){
+  const cardStatus = document.getElementById('cardStatus');
+  const kpiStatus = document.getElementById('kpiStatus');
+  const kpiTotal = document.getElementById('kpiTotal');
+  const kpiOut = document.getElementById('kpiOut');
+  cardStatus.className = 'card';
+  if (Math.abs(total - 100) > 1e-9){
+    kpiStatus.textContent = 'Ajustar %';
+    cardStatus.classList.add('warn');
+  } else if (outRows.length === 0){
+    kpiStatus.textContent = 'Viável';
+    cardStatus.classList.add('ok');
+  } else {
+    kpiStatus.textContent = 'Fora';
+    cardStatus.classList.add('bad');
+  }
+  kpiTotal.textContent = pct(total);
+  kpiOut.textContent = String(outRows.length);
+}
+
+function wireInputs(){
+  document.querySelectorAll('[data-path]').forEach(el => {
+    el.addEventListener('change', () => {
+      readStateFromDom();
+      document.body.dataset.message = 'Valores editados. Clique em Recalcular ou Otimizar para consolidar.';
+      document.body.dataset.messageClass = 'warn';
+      lastInfeasible = false;
+      lastBestWeights = null;
+      render();
+    });
+  });
+}
+
+function wireInlineChosen(){
+  const inline = document.getElementById('chosenInline');
+  if (!inline) return;
+  inline.addEventListener('change', () => {
+    chosenIndex = Number(inline.value || 0);
+    chosenMp.value = String(chosenIndex);
+    lastInfeasible = false;
+    render();
+  });
+}
+
+function validateForOptimize(){
+  const enabled = [];
+  let sumMin = 0, sumMax = 0;
+  for (let j=0; j<state.materials.length; j++){
+    const m = state.materials[j];
+    const use = String(m.use).toLowerCase().startsWith('s');
+    let mn = num(m.min), mx = num(m.max);
+    if (!use) { mn = 0; mx = 0; }
+    if (mn < 0 || mx < 0 || mn > 100 || mx > 100 || mn > mx){
+      return { ok:false, msg:`Verifique mínimo/máximo de ${m.name}. O range precisa ficar entre 0 e 100, com mínimo ≤ máximo.` };
+    }
+    if (use){
+      enabled.push(j);
+      sumMin += mn;
+      sumMax += mx;
+    }
+  }
+  if (enabled.length === 0) return { ok:false, msg:'Selecione ao menos uma matéria-prima com Usar? = Sim.' };
+  if (sumMin > 100) return { ok:false, msg:`Soma dos % mínimos (${fmt(sumMin,2)}%) é maior que 100%. Ajuste os mínimos.` };
+  if (sumMax < 100) return { ok:false, msg:`Soma dos % máximos (${fmt(sumMax,2)}%) é menor que 100%. Ajuste os máximos.` };
+  return { ok:true, enabled };
+}
+
+function optimize(){
+  readStateFromDom();
+  updateChosenOptions();
+  const validation = validateForOptimize();
+  if (!validation.ok){
+    document.body.dataset.message = validation.msg;
+    document.body.dataset.messageClass = 'bad';
+    lastInfeasible = false;
+    render();
+    return;
+  }
+
+  const step = Math.max(1, Number(precisionEl.value || 1));
+  const enabled = validation.enabled;
+  const n = enabled.length;
+  let bestScore = Infinity;
+  let bestWeights = [0,0,0,0];
+  let tested = 0;
+
+  if (n === 1){
+    bestWeights[enabled[0]] = 100;
+    bestScore = scoreForWeights(bestWeights);
+    tested = 1;
+  } else {
+    const partial = [0,0,0,0];
+    function rec(pos, remaining){
+      if (pos === n - 1){
+        const j = enabled[pos];
+        const mn = num(state.materials[j].min);
+        const mx = num(state.materials[j].max);
+        if (remaining >= mn - 1e-9 && remaining <= mx + 1e-9){
+          partial[j] = remaining;
+          const score = scoreForWeights(partial);
+          tested++;
+          if (score < bestScore){
+            bestScore = score;
+            bestWeights = partial.slice();
+          }
+          partial[j] = 0;
+        }
+        return;
+      }
+      const j = enabled[pos];
+      const mn = num(state.materials[j].min);
+      const mx = Math.min(num(state.materials[j].max), remaining);
+      for (let p = mn; p <= mx + 1e-9; p += step){
+        partial[j] = Math.round(p * 1000000) / 1000000;
+        rec(pos + 1, remaining - partial[j]);
+        partial[j] = 0;
+      }
+    }
+    rec(0, 100);
+  }
+
+  if (!Number.isFinite(bestScore) || tested === 0){
+    document.body.dataset.message = 'Não existe combinação de blend que feche 100% dentro dos mínimos e máximos informados.';
+    document.body.dataset.messageClass = 'bad';
+    lastInfeasible = false;
+    render();
+    return;
+  }
+
+  state.materials.forEach((m,j)=> m.blend = Number(bestWeights[j].toFixed(6)));
+  lastBestWeights = bestWeights.slice();
+
+  if (bestScore <= 1.0001){
+    const margem = (1 - bestScore) * 100;
+    document.body.dataset.message = `VIÁVEL - blend encontrado. Margem: ${fmt(margem,2)}% abaixo do limite mais apertado. Combinações avaliadas: ${tested.toLocaleString('pt-BR')}.`;
+    document.body.dataset.messageClass = 'ok';
+    lastInfeasible = false;
+  } else {
+    document.body.dataset.message = `INVIÁVEL com os contaminantes atuais. Veja a coluna de máximo permitido e a análise da matéria-prima ajustável abaixo do resumo. Combinações avaliadas: ${tested.toLocaleString('pt-BR')}.`;
+    document.body.dataset.messageClass = 'bad';
+    lastInfeasible = true;
+  }
+  render();
+}
+
+function calculateManual(){
+  readStateFromDom();
+  const rows = calcRows();
+  const total = totalBlend();
+  const out = rows.filter(r=>r.status==='Fora');
+  lastInfeasible = false;
+  lastBestWeights = state.materials.map(m=>num(m.blend));
+  if (Math.abs(total - 100) > 1e-9){
+    document.body.dataset.message = `Atenção: o total do blend está em ${fmt(total,2)}%. Para comparar com a meta como na planilha, o ideal é fechar 100%.`;
+    document.body.dataset.messageClass = 'warn';
+  } else if (out.length === 0){
+    const worst = rows.reduce((m,r)=>Math.max(m,r.ratio),0);
+    document.body.dataset.message = `VIÁVEL no blend manual. Margem: ${fmt((1-worst)*100,2)}% abaixo do limite mais apertado.`;
+    document.body.dataset.messageClass = 'ok';
+  } else {
+    document.body.dataset.message = `FORA no blend manual: ${out.map(r=>r.name).join(', ')}.`;
+    document.body.dataset.messageClass = 'bad';
+    lastInfeasible = true;
+  }
+  render();
+}
+
+function addRow(){
+  readStateFromDom();
+  state.contaminants.push({ name:'Novo contaminante', unit:'ppm', values:[0,0,0,0], meta:0 });
+  lastInfeasible = false;
+  document.body.dataset.message = 'Nova linha adicionada. Edite os valores e calcule novamente.';
+  document.body.dataset.messageClass = 'warn';
+  render();
+}
+
+function clearBlend(){
+  readStateFromDom();
+  state.materials.forEach(m => m.blend = 0);
+  lastInfeasible = false;
+  lastBestWeights = null;
+  document.body.dataset.message = 'Blend limpo. Contaminantes, limites, mínimos e máximos foram mantidos.';
+  document.body.dataset.messageClass = 'warn';
+  render();
+}
+
+function csvEscape(value){
+  const s = String(value ?? '');
+  return '"' + s.replaceAll('"', '""') + '"';
+}
+
+function downloadTextFile(filename, content, mime='text/plain;charset=utf-8'){
+  const blob = new Blob([content], {type:mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportCsv(){
+  readStateFromDom();
+  const weights = state.materials.map(m=>num(m.blend));
+  const rows = calcRows(weights);
+  const maxVals = lastInfeasible ? maxForChosen(weights) : state.contaminants.map(()=>null);
+  const chosenName = state.materials[chosenIndex]?.name || 'matéria-prima escolhida';
+  const header = ['Contaminante', 'Unidade', ...state.materials.map(m=>m.name || 'MP'), 'Resultado do blend', 'Meta/Limite', 'Status', `Máximo permitido em ${chosenName}`];
+  const lines = [header.map(csvEscape).join(';')];
+  rows.forEach((r,i)=>{
+    const line = [
+      state.contaminants[i].name,
+      state.contaminants[i].unit || '',
+      ...state.contaminants[i].values,
+      r.result,
+      state.contaminants[i].meta,
+      r.status,
+      maxVals[i] === null ? '' : maxVals[i]
+    ];
+    lines.push(line.map(csvEscape).join(';'));
+  });
+  lines.push('');
+  lines.push(['Matéria-prima','Usar?','% Blend','% min','% max'].map(csvEscape).join(';'));
+  state.materials.forEach(m=> lines.push([m.name,m.use,m.blend,m.min,m.max].map(csvEscape).join(';')));
+  downloadTextFile('otimizador_blend_cenario.csv', lines.join('\n'), 'text/csv;charset=utf-8');
+  document.body.dataset.message = 'CSV exportado com configuração, resultados e análise da matéria-prima ajustável.';
+  document.body.dataset.messageClass = 'ok';
+  render();
+}
+
+function saveScenario(){
+  readStateFromDom();
+  const payload = { state, chosenIndex, precision: precisionEl.value, savedAt: new Date().toISOString() };
+  localStorage.setItem('otimizadorBlendCenarioPT', JSON.stringify(payload));
+  document.body.dataset.message = 'Cenário salvo no navegador. Quando abrir este arquivo novamente neste navegador, ele será carregado automaticamente.';
+  document.body.dataset.messageClass = 'ok';
+  render();
+}
+
+function loadSavedScenario(){
+  try{
+    const raw = localStorage.getItem('otimizadorBlendCenarioPT');
+    if (!raw) return false;
+    const payload = JSON.parse(raw);
+    if (!payload || !payload.state || !Array.isArray(payload.state.materials) || !Array.isArray(payload.state.contaminants)) return false;
+    state = payload.state;
+    state.contaminants.forEach((c) => { if (c.unit === undefined) c.unit = ''; });
+    chosenIndex = Number.isFinite(Number(payload.chosenIndex)) ? Number(payload.chosenIndex) : 0;
+    if (payload.precision) precisionEl.value = String(payload.precision);
+    document.body.dataset.message = 'Cenário salvo no navegador carregado.';
+    document.body.dataset.messageClass = 'ok';
+    return true;
+  }catch(e){
+    console.warn('Não foi possível carregar o cenário salvo.', e);
+    return false;
+  }
+}
+
+function restore(){
+  state = structuredClone(originalState);
+  lastMode = 'manual';
+  lastInfeasible = false;
+  lastBestWeights = null;
+  chosenIndex = 0;
+  document.body.dataset.message = 'Valores restaurados conforme a aba 5 da planilha.';
+  document.body.dataset.messageClass = 'ok';
+  render();
+}
+
+document.getElementById('optBtn').addEventListener('click', optimize);
+document.getElementById('calcBtn').addEventListener('click', calculateManual);
+document.getElementById('clearBtn').addEventListener('click', clearBlend);
+document.getElementById('restoreBtn').addEventListener('click', restore);
+document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
+document.getElementById('saveScenarioBtn').addEventListener('click', saveScenario);
+chosenMp.addEventListener('change', () => { chosenIndex = Number(chosenMp.value || 0); lastInfeasible = false; render(); });
+precisionEl.addEventListener('change', () => { document.body.dataset.message = 'Precisão alterada. Clique em Otimizar para recalcular.'; document.body.dataset.messageClass = 'warn'; render(); });
+
+const loadedSaved = loadSavedScenario();
+if (!loadedSaved){
+  document.body.dataset.message = 'Valores carregados conforme a aba 5 da planilha.';
+  document.body.dataset.messageClass = 'ok';
+}
+render();
+calculateManual();
+</script>
+</body>
+</html>
