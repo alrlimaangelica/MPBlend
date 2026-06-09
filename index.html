@@ -363,7 +363,7 @@
       </select>
       <label for="chosenMp">Matéria-prima para ajuste se inviável:</label>
       <select id="chosenMp"></select>
-      <span class="hint">Dica: edite direto nas células, como no Excel. Use apenas este seletor para escolher a matéria-prima ajustável.</span>
+      <span class="hint">Dica: edite direto nas células, como no Excel.</span>
     </div>
 
     <section class="summary" aria-label="Resumo do blend">
@@ -406,7 +406,7 @@
 const originalState = {
   materials: [
     { name: 'Óleo de soja', blend: 11, use: 'Sim', min: 1, max: 100 },
-    { name: 'Canola/Colza', blend: 15, use: 'Sim', min: 15, max: 100 },
+    { name: 'Canola', blend: 15, use: 'Sim', min: 15, max: 100 },
     { name: 'Sebo', blend: 31, use: 'Sim', min: 15, max: 100 },
     { name: 'UCO', blend: 43, use: 'Sim', min: 15, max: 100 }
   ],
@@ -921,7 +921,7 @@ function restore(){
   lastInfeasible = false;
   lastBestWeights = null;
   chosenIndex = 0;
-  document.body.dataset.message = 'Valores restaurados conforme a aba 5 da planilha.';
+  document.body.dataset.message = 'Valores restaurados conforme a aba da planilha.';
   document.body.dataset.messageClass = 'ok';
   render();
 }
@@ -937,7 +937,7 @@ precisionEl.addEventListener('change', () => { document.body.dataset.message = '
 
 const loadedSaved = loadSavedScenario();
 if (!loadedSaved){
-  document.body.dataset.message = 'Valores carregados conforme a aba 5 da planilha.';
+  document.body.dataset.message = 'Valores carregados conforme a aba da planilha.';
   document.body.dataset.messageClass = 'ok';
 }
 render();
